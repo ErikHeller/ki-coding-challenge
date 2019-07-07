@@ -93,7 +93,7 @@ def terminate(state):
 
         counter = 0
         column = state[last_e]
-        height = count_column(state, column)
+        height = count_column2(state, column, last_e)
 
         # Configure the directions to look at and define if the counter determining subsequent identical stones
         # should be reset before checking this direction.
@@ -177,6 +177,10 @@ def findminusones(state):
 
 
 def utility2_new(state):
+    full_column_penalty = -50
+    win_bonus = 100
+    space_penalty = 100
+
     last_e, last_e2 = findlastvalues(state)
     color = last_e % 2
     res = color
@@ -194,7 +198,7 @@ def utility2_new(state):
         color = last_e % 2
         combo = 0
         column = state[last_e]
-        height = count_column(state, column)
+        height = count_column2(state, column, last_e)
 
         # Configure the directions to look at
         # index1: vertical direction, index2: horizontal direction
@@ -255,9 +259,19 @@ def utility2_new(state):
                 else:
                     break
 
-        full_column_penalty = -50
+            # Add bonus for possible win
+            if combo == 4:
+                counter[c] += win_bonus
 
-        counter[c] += b * (min(4, 8 - height))
+            # Penalty if there is less space than required for vertical move
+            # TODO: Check diagonal axes
+            if horiz == "":
+                space_req = 4 - combo
+                space_avail = 8 - height
+                penalty = b * min(0, space_avail - space_req) * space_penalty
+                counter[c] += penalty
+
+        counter[c] += b * min(4, 8 - height)
         counter[c] += full_column_penalty * full_columns[c]
 
     if res == 0:
@@ -413,8 +427,8 @@ def utility(state):
 # spieler 1
 def do_action(state, column=None, flip=False):
     return_state = np.copy(state)
+    last_e = last_element(state)
     if flip:
-        last_e = last_element(state)
         if last_e % 2 == 1:  # rot flippt
             for i in range(last_e + 1):
                 return_state[i + 1] = state[last_e - i]
@@ -427,7 +441,7 @@ def do_action(state, column=None, flip=False):
             return return_state
     for i in range(len(return_state)):
         if return_state[i] == 0:
-            if count_column(return_state, column) < 8:
+            if count_column2(return_state, column, last_e) < 8:
                 return_state[i] = column
             else:
                 return_state[i] = -1
@@ -442,7 +456,16 @@ def newaction(state, flip=False):
         res[11] = do_action(state, flip=True)
     else:
         res = np.zeros((11, 90))
-    order = [6, 5, 7, 8, 4, 3, 9, 10, 2, 1, 11]
+
+    # Order new actions starting from last action of the same player outwards in the board
+    last_action = state[last_element(state) - 1]
+    order = [last_action,
+             ((last_action - 2) % 11) + 1, (last_action % 11) + 1,
+             ((last_action - 3) % 11) + 1, ((last_action + 1) % 11) + 1,
+             ((last_action - 4) % 11) + 1, ((last_action + 2) % 11) + 1,
+             ((last_action - 5) % 11) + 1, ((last_action + 3) % 11) + 1,
+             ((last_action - 6) % 11) + 1, ((last_action + 4) % 11) + 1]
+
     for i in range(len(order)):
         res[i] = (do_action(state, order[i]))
     # np.random.shuffle(res)
