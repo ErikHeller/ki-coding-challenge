@@ -64,6 +64,14 @@ def count_column(state, column):
     return sum(count)
 
 
+def count_column2(state,column,last_e):
+    res = 0
+    for i in range(last_e+1):
+        if state[i] == column:
+            res +=1
+    return res
+
+
 def do_action(state, column=None, flip=False):
     return_state = np.copy(state)
     if flip:
@@ -89,80 +97,94 @@ def do_action(state, column=None, flip=False):
 
 
 def terminate(state):
-    if sum(state != 0) < 9:
+    if sum([(x != 0) for x in state]) < 9:
         return False
-    last_e, _ = findlastvalues(state)
-    color = last_e % 2
+    last_el, _ = findlastvalues(state)
+    color = last_el % 2
     # 0 für rot, 1 für gelb
 
-    counter = 0
-    column = state[last_e]
-    height = count_column(state, column)
-
-    # Configure the directions to look at and define if the counter determining subsequent identical stones
-    # should be reset before checking this direction.
-    # index1: vertical direction, index2: horizontal direction, index3: Reset counter
-    # Always reset unless you have subsequent directions on the same axis that need to have a common counter.
-    directions = [["bot", "left", True],
-                  ["top", "right", False],
-                  ["top", "left", True],
-                  ["bot", "right", False],
-                  ["bot", "", True],
-                  ["", "left", True],
-                  ["", "right", False]]
-
-    for direction in directions:
-        vert = direction[0]
-        horiz = direction[1]
-        reset = direction[2]
-
-        # Reset counter
-        if reset:
-            counter = 0
-
-        # Check the neighborhood with iteratively increasing distance for subsequent identical stones
-        for i in range(4):
-            # Set horizontal direction for column dependent variables
-            if horiz == "left":
-                column_dir = column - i - 1
-                column_bounds_dir = column_dir > 0
-            elif horiz == "right":
-                column_dir = column + i + 1
-                column_bounds_dir = column_dir < 12
-            else:
-                # Don't move horizontally - no column bounds need to be checked
-                column_dir = column
-                column_bounds_dir = True
-            indices_dir = np.where(state == int(column_dir))[0]
-
-            # Set vertical direction for height dependent variables
-            if vert == "bot":
-                height_dir = height - i - 1
-            elif vert == "top":
-                height_dir = height + i + 1
-            else:
-                # Don't move vertically
-                height_dir = height
-
-            # Read color of stone in looked up direction.
-            # Check if position of stone is outside the vertical board boundaries
-            # and if so stop looking in that direction
-            if len(indices_dir) >= height_dir > 0:
-                color_dir = indices_dir[height_dir - 1] % 2
-            else:
+    n = max(1, int(last_el / 2))
+    # print(n)
+    for k in range(n):  # geht jeden gelben/roten stein der farbe durch
+        param = 0
+        while True:
+            last_e = last_el - k * 2 - param
+            # print(last_e)
+            if last_e < 8:
+                return False
+            elif state[last_e] != -1 and state[last_e] != 13:
                 break
-
-            # Increase counter if a stone with the same color has been found in the looked up direction.
-            # If no fitting stone has been found or the stone is outside the horizontal board boundaries
-            # don't look in that direction for more stones
-            if column_bounds_dir and color_dir == color:
-                counter += 1
             else:
-                break
+                param += 2
 
-            # If four additional subsequent stones with the same color have been found, terminate
-            if counter == 4:
-                return True
+        counter = 0
+        column = state[last_e]
+        height = count_column(state, column)
+
+        # Configure the directions to look at and define if the counter determining subsequent identical stones
+        # should be reset before checking this direction.
+        # index1: vertical direction, index2: horizontal direction, index3: Reset counter
+        # Always reset unless you have subsequent directions on the same axis that need to have a common counter.
+        directions = [["bot", "left", True],
+                      ["top", "right", False],
+                      ["top", "left", True],
+                      ["bot", "right", False],
+                      ["bot", "", True],
+                      ["", "left", True],
+                      ["", "right", False]]
+
+        for direction in directions:
+            vert = direction[0]
+            horiz = direction[1]
+            reset = direction[2]
+
+            # Reset counter
+            if reset:
+                counter = 0
+
+            # Check the neighborhood with iteratively increasing distance for subsequent identical stones
+            for i in range(4):
+                # Set horizontal direction for column dependent variables
+                if horiz == "left":
+                    column_dir = column - i - 1
+                    column_bounds_dir = column_dir > 0
+                elif horiz == "right":
+                    column_dir = column + i + 1
+                    column_bounds_dir = column_dir < 12
+                else:
+                    # Don't move horizontally - no column bounds need to be checked
+                    column_dir = column
+                    column_bounds_dir = True
+                indices_dir = np.where(state == int(column_dir))[0]
+
+                # Set vertical direction for height dependent variables
+                if vert == "bot":
+                    height_dir = height - i - 1
+                elif vert == "top":
+                    height_dir = height + i + 1
+                else:
+                    # Don't move vertically
+                    height_dir = height
+
+                # Read color of stone in looked up direction.
+                # Check if position of stone is outside the vertical board boundaries
+                # and if so stop looking in that direction
+                if len(indices_dir) >= height_dir > 0:
+                    color_dir = indices_dir[height_dir - 1] % 2
+                else:
+                    break
+
+                # Increase counter if a stone with the same color has been found in the looked up direction.
+                # If no fitting stone has been found or the stone is outside the horizontal board boundaries
+                # don't look in that direction for more stones
+                if column_bounds_dir and color_dir == color:
+                    counter += 1
+                else:
+                    break
+
+                # If four additional subsequent stones with the same color have been found, terminate
+                if counter == 4:
+                    return True
 
     return False
 
