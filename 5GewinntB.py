@@ -57,11 +57,13 @@ def openOurState(weareplayer):
         
 
 
-def writeNewState(state, fliplist, weareplayer):
+def writeNewState(state, fliplist, weareplayer, ourmove):
     np.savetxt('OurStateB.txt', state, fmt = '%1d')
     with open('HelperfileB.txt', 'w') as f:
         f.write(weareplayer + '\n' + str(True) + '\n' + str(True))
-    np.savetxt('LastAction_Player'+weareplayer+'.txt', 
+    g = open('LastAction_PlayerB.txt', "w")
+    g.write(str(int(ourmove)))
+    g.close() 
 
 
 
@@ -83,13 +85,11 @@ def open5GewinntState():
     
 
 def openLastAction():
-    _, theotherplayer, _ = openHelperFile()
-    print('test' + theotherplayer)
-    with open('LastAction_Player' + theotherplayer + '.txt') as f:
-        try:
-            lastmove = f.read()
-        except StopIteration:
-            print('no file here')
+    #_, theotherplayer, _ = openHelperFile()
+    f = open('LastAction_PlayerA.txt')
+    lastmove = f.read()
+    f.close()
+    return lastmove
 
 ########------------------#############
 
@@ -636,12 +636,21 @@ def findbestmove2(state, flip, player, num_it):
 
 
 def play5():
+    new_input = 100
+    depth = 4
+
+    
     weareplayer, theotherplayer, fliplist = openHelperFile()
-    newstate, enemyflipped = openOurState()
+    comp = 2 if weareplayer == 'A' else 1
+    newstate, enemyflipped = openOurState(weareplayer)
     if enemyflipped == True:
         fliplist[1] = True
     state, _, fliplist[0] = findbestmove2(newstate, fliplist, comp, depth)
-    writenewstate(state, fliplist, weareplayer)
+    ourmove = state[np.where(state != 0)[-1]]
+    if ourmove == 13:
+        ourmove = 'flip'
+    writeNewState(state, fliplist, weareplayer, ourmove)
+
 
 
 

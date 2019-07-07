@@ -514,26 +514,26 @@ def findbestmove2(state, flip, player, num_it):
     if state[3] == 0:
         return do_action(state, 6), False, flip
     actions = newaction(state, flip[0])
-    v = -10000 if player == 1 else 10000
+    v = -10000 if player == 'A' else 10000
     index = np.random.uniform(1, 12)
     beststate = do_action(state, index)
 
     for i in actions:
         last_e = last_element(i)
-        if i[0] != state[0] and player == 1:
+        if i[0] != state[0] and player == 'A':
             newv = minval1(i, [False, flip[1]], num_it - 1, -1000, 1000, otherplayer(player))
         elif i[last_e] == 13:
             newv = maxval1(i, [flip[0], False], num_it - 1, -1000, 1000, otherplayer(player))
-        elif player == 2:
+        elif player == 'B':
             newv = maxval1(i, flip, num_it - 1, -1000, 1000, otherplayer(player))
         else:
             newv = minval1(i, flip, num_it - 1, -1000, 1000, otherplayer(player))
         # print(newv)
         print(newv, i)
-        if newv > v and player == 1:
+        if newv > v and player == 'A':
             v = newv
             beststate = i
-        if newv < v and player == 2:
+        if newv < v and player == 'B':
             v = newv
             beststate = i
 

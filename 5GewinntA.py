@@ -3,6 +3,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from itertools import islice
+import sys
 
 
 def field():
@@ -18,18 +19,15 @@ def openHelperFile():
         lines = f.readlines()
         if lines[0] == 'C' or lines[0] == 'C\n':
             weareplayer, theotherplayer = open5GewinntState()
-            print('inside this loop')
         elif lines[0] == 'A' or lines[0] == 'A\n':
             weareplayer = 'A'
             theotherplayer = 'B'
-            print('blablub')
         elif lines[0] == 'B' or lines[0] == 'B\n':
             weareplayer = 'B'
             theotherplayer = 'A'
         ourflip = (lines[1] == 'True\n')
         enemyflip = (lines[2] == 'True\n')
-        fliplist = (ourflip, enemyflip)
-        print(fliplist)
+        fliplist = [ourflip, enemyflip]
     return weareplayer, theotherplayer, fliplist
 
 
@@ -52,17 +50,20 @@ def openOurState(weareplayer):
             
         elif openLastAction() != 'flip': 
             enemyflipped = False
-            return do_action(state, column = int(lastaction)), enemyflipped
+            return do_action(state, column = int(openLastAction())), enemyflipped
         elif openLastAction() == 'flip':
             enemyflipped = True
             return do_action(state, flip = True), enemyflipped
         
 
 
-def writeNewState(state, fliplist, weareplayer):
+def writeNewState(state, fliplist, weareplayer, ourmove):
     np.savetxt('OurStateA.txt', state, fmt = '%1d')
     with open('HelperfileA.txt', 'w') as f:
         f.write(weareplayer + '\n' + str(True) + '\n' + str(True))
+    f = open('LastAction_PlayerA.txt', "w")
+    f.write(str(int(ourmove)))
+    f.close()    
 
 
 
@@ -84,14 +85,12 @@ def open5GewinntState():
     
 
 def openLastAction():
-    _, theotherplayer, _ = openHelperFile()
-    print('test' + theotherplayer)
-    with open('LastAction_Player' + theotherplayer + '.txt') as f:
-        try:
-            lastmove = f.read()
-        except StopIteration:
-            print('no file here')
-
+    weareplayer, theotherplayer, _ = openHelperFile()
+    print('test' + theotherplayer + weareplayer)
+    with open('LastAction_Player'+theotherplayer+'.txt', 'r') as f:
+        lastmove = f.read()
+    return lastmove
+        
 ########------------------#############
 
 
@@ -595,9 +594,9 @@ def maxval1(state, flip, num_it, alpha, beta, player):
 
 
 def otherplayer(player):
-    if player == 1:
-        return 2
-    return 1
+    if player == 'A':
+        return 'B'
+    return 'A'
 
 
 # player1 fängt an, dann player2
@@ -605,44 +604,53 @@ def findbestmove2(state, flip, player, num_it):
     if state[3] == 0:
         return do_action(state, 6), False, flip
     actions = newaction(state, flip[0])
-    v = -10000 if player == 1 else 10000
+    v = -10000 if player == 'A' else 10000
     index = np.random.uniform(1, 12)
     beststate = do_action(state, index)
 
     for i in actions:
         last_e = last_element(i)
-        if i[0] != state[0] and player == 1:
+        if i[0] != state[0] and player == 'A':
             newv = minval1(i, [False, flip[1]], num_it - 1, -1000, 1000, otherplayer(player))
         elif i[last_e] == 13:
             newv = maxval1(i, [flip[0], False], num_it - 1, -1000, 1000, otherplayer(player))
-        elif player == 2:
+        elif player == 'B':
             newv = maxval1(i, flip, num_it - 1, -1000, 1000, otherplayer(player))
         else:
             newv = minval1(i, flip, num_it - 1, -1000, 1000, otherplayer(player))
         # print(newv)
         print(newv, i)
-        if newv > v and player == 1:
+        if newv > v and player == 'A':
             v = newv
             beststate = i
-        if newv < v and player == 2:
+        if newv < v and player == 'B':
             v = newv
             beststate = i
 
-    if sum(beststate == 13) != sum(state == 13) and player == 1:
+    if sum(beststate == 13) != sum(state == 13) and player == 'A':
         return beststate, terminate(beststate), [False, flip[1]]
-    if sum(beststate == 13) != sum(state == 13) and player == 2:
+    if sum(beststate == 13) != sum(state == 13) and player == 'B':
         return beststate, terminate(beststate), [flip[0], False]
     return beststate, terminate(beststate), flip
 
 
 
 def play5():
+    new_input = 100
+    depth = 4
+
+    
     weareplayer, theotherplayer, fliplist = openHelperFile()
-    newstate, enemyflipped = openOurState()
+    comp = 2 if weareplayer == 'A' else 1
+    newstate, enemyflipped = openOurState(weareplayer)
     if enemyflipped == True:
         fliplist[1] = True
     state, _, fliplist[0] = findbestmove2(newstate, fliplist, comp, depth)
-    writenewstate(state, fliplist, weareplayer)
+    ourmove = state[np.where(state != 0)[-1]]
+    if ourmove == 13:
+        ourmove = 'flip'
+    writeNewState(state, fliplist, weareplayer, ourmove)
+
 
 
 
