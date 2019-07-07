@@ -55,8 +55,11 @@ def findlastvalues(state):
 
 def count_column(state, column):
     # count = state == column
-    count = [(x == column) for x in state]
-    return sum(count)
+    counter = 0
+    for x in state:
+        if x == column:
+            counter += 1
+    return counter
 
 
 def count_column2(state, column, last_e):
@@ -160,6 +163,108 @@ def terminate(state):
     return False
 
 
+def findminusones(state):
+    a, b = 0, 0
+    last_e = last_element(state)
+    color = last_e % 2
+    for i in range(last_e + 1):
+        if i % 2 == color and state[i] == -1:
+            a += 1
+        elif i % 2 != color and state[i] == -1:
+            b += 1
+
+    return a, b
+
+
+def utility2_new(state):
+    last_e, last_e2 = findlastvalues(state)
+    color = last_e % 2
+    res = color
+    full_columns = findminusones(state)
+    # 0 für rot, 1 für gelb
+    state_before = state.copy()
+    state_before[last_e] = 0
+    # print(state_before)
+    counter = [0, 0]
+    a, b = 2, 1
+    for c in range(len(counter)):
+        if c == 1:
+            last_e = last_e2
+            # print(last_e)
+        color = last_e % 2
+        combo = 0
+        column = state[last_e]
+        height = count_column(state, column)
+
+        # Configure the directions to look at
+        # index1: vertical direction, index2: horizontal direction
+        directions = [["bot", "left", True],
+                      ["top", "right", False],
+                      ["top", "left", True],
+                      ["bot", "right", False],
+                      ["bot", "", True],
+                      ["", "left", True],
+                      ["", "right", False]]
+
+        for direction in directions:
+            vert = direction[0]
+            horiz = direction[1]
+            reset = direction[2]
+
+            # Reset combos
+            if reset:
+                combo = 0
+
+            # Check the neighborhood with iteratively increasing distance
+            for i in range(4):
+                # Set horizontal direction for column dependent variables
+                if horiz == "left":
+                    column_dir = column - i - 1
+                    column_bounds_dir = column_dir > 0
+                elif horiz == "right":
+                    column_dir = column + i + 1
+                    column_bounds_dir = column_dir < 12
+                else:
+                    # Don't move horizontally - no column bounds need to be checked
+                    column_dir = column
+                    column_bounds_dir = True
+                indices_dir = np.where(state == int(column_dir))[0]
+
+                # Set vertical direction for height dependent variables
+                if vert == "bot":
+                    height_dir = height - i - 1
+                elif vert == "top":
+                    height_dir = height + i + 1
+                else:
+                    # Don't move vertically
+                    height_dir = height
+
+                # TODO: Edit comment
+                # Increase counter if a stone with the same color has been found in the looked up direction.
+                # If no fitting stone has been found or the stone is outside the horizontal board boundaries
+                # don't look in that direction for more stones
+                if height_dir > 0 and column_bounds_dir:
+                    if len(indices_dir) >= height_dir:
+                        if indices_dir[height_dir - 1] % 2 == color:
+                            combo += 1
+                            counter[c] += a * combo
+                        else:
+                            break
+                    else:
+                        counter[c] += b
+                else:
+                    break
+
+        full_column_penalty = -50
+
+        counter[c] += b * (min(4, 8 - height))
+        counter[c] += full_column_penalty * full_columns[c]
+
+    if res == 0:
+        return counter[0] - counter[1]
+    return counter[1] - counter[0]
+
+
 def utility2(state):
     last_e, last_e2 = findlastvalues(state)
     color = last_e % 2
@@ -184,24 +289,27 @@ def utility2(state):
         check_right = True
         for i in range(4):
             indices = np.where(state == int(column - i - 1))[0]
-            if len(indices) >= height and len(indices) > 0 and check_left and column - i - 1 > 0:
-                if indices[height - 1] % 2 == color:
-                    counter[c] += a
+            if height > 0 and check_left and column - i - 1 > 0:
+                if len(indices) >= height:
+                    if indices[height - 1] % 2 == color:
+                        counter[c] += a
+                    else:
+                        check_left = False
                 else:
-                    check_left = False
-            elif check_left and column - i - 1 > 0 and len(indices) < height:
-                counter[c] += b
+                    counter[c] += b
             else:
                 check_left = False
             # print(counter,'lh')
+
             indices = np.where(state == int(column + i + 1))[0]
-            if len(indices) >= height and len(indices) > 0 and check_right and column + i + 1 < 12:
-                if indices[height - 1] % 2 == color:
-                    counter[c] += a
+            if height > 0 and check_right and column + i + 1 < 12:
+                if len(indices) >= height:
+                    if indices[height - 1] % 2 == color:
+                        counter[c] += a
+                    else:
+                        check_right = False
                 else:
-                    check_right = False
-            elif check_right and column + i + 1 < 12 and len(indices) < height:
-                counter[c] += b
+                    counter[c] += b
             else:
                 check_right = False
             # print(counter,'rh')
@@ -211,10 +319,14 @@ def utility2(state):
         for i in range(4):
             indices = np.where(state == int(column))[0]
             # if(and len(indices)>0)
-            if check_bot and height - i - 1 > 0 and indices[height - i - 2] % 2 == color:
-                counter[c] += a
+            if check_bot and height - i - 1 > 0:
+                if indices[height - i - 2] % 2 == color:
+                    counter[c] += a
+                else:
+                    check_bot = False
             else:
                 check_bot = False
+
         counter[c] += b * (min(4, 8 - height))
         # print(counter,'v')
 
@@ -285,7 +397,7 @@ def utility(state):
     res = state.copy()
     n = len(res)
     i = 0
-    v = utility2(res)
+    v = utility2_new(res)
     while n - 4 - 2 * i >= 0 and i < 3:
         # print(v,res)
         a, b = findlastvalues(res)
@@ -293,23 +405,9 @@ def utility(state):
             break
         res[a] = -1
         res[b] = -1
-        v += utility2(res)
+        v += utility2_new(res)
         i += 1
     return v
-
-
-def findminusones(state):
-    a, b = 0, 0
-    last_e = last_element(state)
-    color = last_e % 2
-    for i in range(last_e + 1):
-        if i % 2 == color and state[i] == -1:
-            a += 1
-
-    for i in range(last_e + 1):
-        if i % 2 != color and state[i] == -1:
-            b += 1
-    return a, b
 
 
 # spieler 1
