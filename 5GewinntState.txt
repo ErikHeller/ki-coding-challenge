@@ -1,0 +1,12 @@
+Moves-Played: 0
+Last-Move: nobody	-1
+
+Current-State:
+eeeeeeeeeee
+eeeeeeeeeee
+eeeeeeeeeee
+eeeeeeeeeee
+eeeeeeeeeee
+eeeeeeeeeee
+eeeeeeeeeee
+eeeeeeeeeee
