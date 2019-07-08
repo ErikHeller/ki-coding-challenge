@@ -357,134 +357,6 @@ def utility2_new(state):
     return counter[1] - counter[0]
 
 
-def utility2(state):
-    last_e, last_e2 = findlastvalues(state)
-    color = last_e % 2
-    res = color
-    lastvals = findminusones(state)
-    # 0 für rot, 1 für gelb
-    state_before = state.copy()
-    state_before[last_e] = 0
-    # print(state_before)
-    counter = [0, 0]
-    a, b = 2, 1
-    for c in range(len(counter)):
-        if c == 1:
-            last_e = last_e2
-            # print(last_e)
-        color = last_e % 2
-        column = state[last_e]
-        height = count_column(state, column)
-
-        # horizontal
-        check_left = True
-        check_right = True
-        for i in range(4):
-            indices = np.where(state == int(column - i - 1))[0]
-            if height > 0 and check_left and column - i - 1 > 0:
-                if len(indices) >= height:
-                    if indices[height - 1] % 2 == color:
-                        counter[c] += a
-                    else:
-                        check_left = False
-                else:
-                    counter[c] += b
-            else:
-                check_left = False
-            # print(counter,'lh')
-
-            indices = np.where(state == int(column + i + 1))[0]
-            if height > 0 and check_right and column + i + 1 < 12:
-                if len(indices) >= height:
-                    if indices[height - 1] % 2 == color:
-                        counter[c] += a
-                    else:
-                        check_right = False
-                else:
-                    counter[c] += b
-            else:
-                check_right = False
-            # print(counter,'rh')
-
-        # vertikal
-        check_bot = True
-        for i in range(4):
-            indices = np.where(state == int(column))[0]
-            # if(and len(indices)>0)
-            if check_bot and height - i - 1 > 0:
-                if indices[height - i - 2] % 2 == color:
-                    counter[c] += a
-                else:
-                    check_bot = False
-            else:
-                check_bot = False
-
-        counter[c] += b * (min(4, 8 - height))
-        # print(counter,'v')
-
-        # diag top left, bot right
-        check_left = True
-        check_right = True
-        for i in range(4):
-            indices = np.where(state == int(column - i - 1))[0]
-            if len(indices) >= height + 1 + i and check_left and column - i - 1 > 0:
-                if indices[height + i] % 2 == color:
-                    counter[c] += a
-                else:
-                    check_left = False
-            elif check_left and column - i - 1 > 0 and len(indices) < height + 1 + i:
-                counter[c] += b
-            else:
-                check_left = False
-
-            indices = np.where(state == int(column + i + 1))[0]
-            if len(indices) >= height - 1 - i > 0 and check_right and column + i + 1 < 12:
-                if indices[height - i - 2] % 2 == color:
-                    counter[c] += a
-                else:
-                    check_right = False
-            elif check_right and column + i + 1 < 12 and len(indices) < height - 1 - i > 0:
-                counter[c] += b
-            else:
-                check_right = False
-        # print(counter,'diag1')
-
-        # diag bot left, top right
-        check_left = True
-        check_right = True
-        for i in range(4):
-            indices = np.where(state == int(column - i - 1))[0]
-            if len(indices) >= height - 1 - i > 0 and check_left and column - i - 1 > 0:
-                if indices[height - i - 2] % 2 == color:
-                    counter[c] += a
-                else:
-                    check_left = False
-            elif check_left and column - i - 1 > 0 and len(indices) < height - 1 - i > 0:
-                counter[c] += b
-            else:
-                check_left = False
-
-            indices = np.where(state == int(column + i + 1))[0]
-            if len(indices) >= height + 1 + i and check_right and column + i + 1 < 12:
-                if indices[height + i] % 2 == color:
-                    counter[c] += a
-                else:
-                    check_right = False
-            elif check_right and column + i + 1 < 12 and len(indices) < height + 1 + i:
-                counter[c] += b
-            else:
-                check_right = False
-            # print(counter,'r')
-
-        counter[c] -= 50 * lastvals[c]
-        # print(res)
-    # print(counter)
-    # print()
-    if res == 0:
-        return counter[0] - counter[1]
-    return counter[1] - counter[0]
-
-
 def utility(state):
     res = state.copy()
     n = len(res)
@@ -521,8 +393,6 @@ def do_action(state, column=None, flip=False):
         if return_state[i] == 0:
             if count_column(return_state, column) < 8:
                 return_state[i] = column
-            else:
-                return_state[i] = -1
             return return_state
 
     return return_state
@@ -534,7 +404,16 @@ def newaction(state, flip=False):
         res[11] = do_action(state, flip=True)
     else:
         res = np.zeros((11, 90))
-    order = [6, 5, 7, 8, 4, 3, 9, 10, 2, 1, 11]
+
+    # Order new actions starting from last action of the same player outwards in the board
+    last_action = state[last_element(state) - 1]
+    order = [last_action,
+             ((last_action - 2) % 11) + 1, (last_action % 11) + 1,
+             ((last_action - 3) % 11) + 1, ((last_action + 1) % 11) + 1,
+             ((last_action - 4) % 11) + 1, ((last_action + 2) % 11) + 1,
+             ((last_action - 5) % 11) + 1, ((last_action + 3) % 11) + 1,
+             ((last_action - 6) % 11) + 1, ((last_action + 4) % 11) + 1]
+
     for i in range(len(order)):
         res[i] = (do_action(state, order[i]))
     # np.random.shuffle(res)

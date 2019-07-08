@@ -357,11 +357,76 @@ def utility2_new(state):
     return counter[1] - counter[0]
 
 
-def utility2(state):
+def utility(state):
+    res = state.copy()
+    n = len(res)
+    i = 0
+    v = utility2_new(res)
+    while n - 4 - 2 * i >= 0 and i < 3:
+        # print(v,res)
+        a, b = findlastvalues(res)
+        if a == 0 or b == 0:
+            break
+        res[a] = -1
+        res[b] = -1
+        v += utility2_new(res)
+        i += 1
+    return v
+
+
+# spieler 1
+def do_action(state, column=None, flip=False):
+    return_state = np.copy(state)
+    if flip:
+        last_e = last_element(state)
+        if last_e % 2 == 1:  # rot flippt
+            for i in range(last_e + 1):
+                return_state[i + 1] = state[last_e - i]
+            return_state[0] = 13
+            return return_state
+        else:  # gelb flippt
+            for i in range(last_e + 1):
+                return_state[i] = state[last_e - i]
+            return_state[last_e + 1] = 13
+            return return_state
+    for i in range(len(return_state)):
+        if return_state[i] == 0:
+            if count_column(return_state, column) < 8:
+                return_state[i] = column
+            return return_state
+
+    return return_state
+
+
+def newaction(state, flip=False):
+    if flip:
+        res = np.zeros((12, 90))
+        res[11] = do_action(state, flip=True)
+    else:
+        res = np.zeros((11, 90))
+
+    # Order new actions starting from last action of the same player outwards in the board
+    last_action = state[last_element(state) - 1]
+    order = [last_action,
+             ((last_action - 2) % 11) + 1, (last_action % 11) + 1,
+             ((last_action - 3) % 11) + 1, ((last_action + 1) % 11) + 1,
+             ((last_action - 4) % 11) + 1, ((last_action + 2) % 11) + 1,
+             ((last_action - 5) % 11) + 1, ((last_action + 3) % 11) + 1,
+             ((last_action - 6) % 11) + 1, ((last_action + 4) % 11) + 1]
+
+    for i in range(len(order)):
+        res[i] = (do_action(state, order[i]))
+    # np.random.shuffle(res)
+    return res
+def utility2_new(state):
+    full_column_penalty = -50
+    win_bonus = 100
+    space_penalty = 100
+
     last_e, last_e2 = findlastvalues(state)
     color = last_e % 2
     res = color
-    lastvals = findminusones(state)
+    full_columns = findminusones(state)
     # 0 für rot, 1 für gelb
     state_before = state.copy()
     state_before[last_e] = 0
@@ -373,113 +438,84 @@ def utility2(state):
             last_e = last_e2
             # print(last_e)
         color = last_e % 2
+        combo = 0
         column = state[last_e]
-        height = count_column(state, column)
+        height = count_column2(state, column, last_e)
 
-        # horizontal
-        check_left = True
-        check_right = True
-        for i in range(4):
-            indices = np.where(state == int(column - i - 1))[0]
-            if height > 0 and check_left and column - i - 1 > 0:
-                if len(indices) >= height:
-                    if indices[height - 1] % 2 == color:
-                        counter[c] += a
+        # Configure the directions to look at
+        # index1: vertical direction, index2: horizontal direction
+        directions = [["bot", "left", True],
+                      ["top", "right", False],
+                      ["top", "left", True],
+                      ["bot", "right", False],
+                      ["bot", "", True],
+                      ["", "left", True],
+                      ["", "right", False]]
+
+        for direction in directions:
+            vert = direction[0]
+            horiz = direction[1]
+            reset = direction[2]
+
+            # Reset combos
+            if reset:
+                combo = 0
+
+            # Check the neighborhood with iteratively increasing distance
+            for i in range(4):
+                # Set horizontal direction for column dependent variables
+                if horiz == "left":
+                    column_dir = column - i - 1
+                    column_bounds_dir = column_dir > 0
+                elif horiz == "right":
+                    column_dir = column + i + 1
+                    column_bounds_dir = column_dir < 12
+                else:
+                    # Don't move horizontally - no column bounds need to be checked
+                    column_dir = column
+                    column_bounds_dir = True
+                indices_dir = np.where(state == int(column_dir))[0]
+
+                # Set vertical direction for height dependent variables
+                if vert == "bot":
+                    height_dir = height - i - 1
+                elif vert == "top":
+                    height_dir = height + i + 1
+                else:
+                    # Don't move vertically
+                    height_dir = height
+
+                # TODO: Edit comment
+                # Increase counter if a stone with the same color has been found in the looked up direction.
+                # If no fitting stone has been found or the stone is outside the horizontal board boundaries
+                # don't look in that direction for more stones
+                if height_dir > 0 and column_bounds_dir:
+                    if len(indices_dir) >= height_dir:
+                        if indices_dir[height_dir - 1] % 2 == color:
+                            combo += 1
+                            counter[c] += a * combo
+                        else:
+                            break
                     else:
-                        check_left = False
+                        counter[c] += b
                 else:
-                    counter[c] += b
-            else:
-                check_left = False
-            # print(counter,'lh')
+                    break
 
-            indices = np.where(state == int(column + i + 1))[0]
-            if height > 0 and check_right and column + i + 1 < 12:
-                if len(indices) >= height:
-                    if indices[height - 1] % 2 == color:
-                        counter[c] += a
-                    else:
-                        check_right = False
-                else:
-                    counter[c] += b
-            else:
-                check_right = False
-            # print(counter,'rh')
+            # Add bonus for possible win
+            if combo == 4:
+                counter[c] += win_bonus
 
-        # vertikal
-        check_bot = True
-        for i in range(4):
-            indices = np.where(state == int(column))[0]
-            # if(and len(indices)>0)
-            if check_bot and height - i - 1 > 0:
-                if indices[height - i - 2] % 2 == color:
-                    counter[c] += a
-                else:
-                    check_bot = False
-            else:
-                check_bot = False
+            # Penalty if there is less space than required for vertical move
+            # TODO: Check diagonal axes
+            if horiz == "":
+                space_req = 4 - combo
+                space_avail = 8 - height
+                penalty = b * min(0, space_avail - space_req) * space_penalty
+                counter[c] += penalty
 
-        counter[c] += b * (min(4, 8 - height))
-        # print(counter,'v')
+        counter[c] += b * min(4, 8 - height)
+        counter[c] += full_column_penalty * full_columns[c]
 
-        # diag top left, bot right
-        check_left = True
-        check_right = True
-        for i in range(4):
-            indices = np.where(state == int(column - i - 1))[0]
-            if len(indices) >= height + 1 + i and check_left and column - i - 1 > 0:
-                if indices[height + i] % 2 == color:
-                    counter[c] += a
-                else:
-                    check_left = False
-            elif check_left and column - i - 1 > 0 and len(indices) < height + 1 + i:
-                counter[c] += b
-            else:
-                check_left = False
-
-            indices = np.where(state == int(column + i + 1))[0]
-            if len(indices) >= height - 1 - i > 0 and check_right and column + i + 1 < 12:
-                if indices[height - i - 2] % 2 == color:
-                    counter[c] += a
-                else:
-                    check_right = False
-            elif check_right and column + i + 1 < 12 and len(indices) < height - 1 - i > 0:
-                counter[c] += b
-            else:
-                check_right = False
-        # print(counter,'diag1')
-
-        # diag bot left, top right
-        check_left = True
-        check_right = True
-        for i in range(4):
-            indices = np.where(state == int(column - i - 1))[0]
-            if len(indices) >= height - 1 - i > 0 and check_left and column - i - 1 > 0:
-                if indices[height - i - 2] % 2 == color:
-                    counter[c] += a
-                else:
-                    check_left = False
-            elif check_left and column - i - 1 > 0 and len(indices) < height - 1 - i > 0:
-                counter[c] += b
-            else:
-                check_left = False
-
-            indices = np.where(state == int(column + i + 1))[0]
-            if len(indices) >= height + 1 + i and check_right and column + i + 1 < 12:
-                if indices[height + i] % 2 == color:
-                    counter[c] += a
-                else:
-                    check_right = False
-            elif check_right and column + i + 1 < 12 and len(indices) < height + 1 + i:
-                counter[c] += b
-            else:
-                check_right = False
-            # print(counter,'r')
-
-        counter[c] -= 50 * lastvals[c]
-        # print(res)
-    # print(counter)
-    # print()
     if res == 0:
         return counter[0] - counter[1]
     return counter[1] - counter[0]
@@ -532,11 +568,21 @@ def newaction(state, flip=False):
         res[11] = do_action(state, flip=True)
     else:
         res = np.zeros((11, 90))
-    order = [6, 5, 7, 8, 4, 3, 9, 10, 2, 1, 11]
+
+    # Order new actions starting from last action of the same player outwards in the board
+    last_action = state[last_element(state) - 1]
+    order = [last_action,
+             ((last_action - 2) % 11) + 1, (last_action % 11) + 1,
+             ((last_action - 3) % 11) + 1, ((last_action + 1) % 11) + 1,
+             ((last_action - 4) % 11) + 1, ((last_action + 2) % 11) + 1,
+             ((last_action - 5) % 11) + 1, ((last_action + 3) % 11) + 1,
+             ((last_action - 6) % 11) + 1, ((last_action + 4) % 11) + 1]
+
     for i in range(len(order)):
         res[i] = (do_action(state, order[i]))
     # np.random.shuffle(res)
     return res
+
 
 
 def minval1(state, flip, num_it, alpha, beta, player):
