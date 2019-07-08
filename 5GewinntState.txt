@@ -1,5 +1,5 @@
-Moves-Played: 0
-Last-Move: nobody	-1
+Moves-Played: 2
+Last-Move: A	5
 
 Current-State:
 eeeeeeeeeee
@@ -9,4 +9,4 @@ eeeeeeeeeee
 eeeeeeeeeee
 eeeeeeeeeee
 eeeeeeeeeee
-eeeeeeeeeee
+eeeeBAeeeee

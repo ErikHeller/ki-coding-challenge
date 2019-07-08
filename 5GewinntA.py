@@ -10,7 +10,7 @@ def field():
 
 # #######------------------#############
 def openHelperFile():
-    with open('HelperfileA.txt') as f:
+    with open('Helperfile.txt') as f:
         lines = f.readlines()
 
         firstline = lines[0].strip()
@@ -31,7 +31,7 @@ def openHelperFile():
 
 
 def openOurState(weareplayer):
-    with open('OurStateA.txt') as f:
+    with open('OurState.txt', 'r') as f:
         content = f.read()
         state = np.loadtxt(content)
         currentposition = len(state != 0)
@@ -55,10 +55,10 @@ def openOurState(weareplayer):
 
 
 def writeNewState(state, fliplist, weareplayer, ourmove):
-    np.savetxt('OurStateA.txt', state, fmt = '%1d')
-    with open('HelperfileA.txt', 'w') as f:
+    np.savetxt('OurState.txt', state, fmt = '%1d')
+    with open('Helperfile.txt', 'w') as f:
         f.write(weareplayer + '\n' + str(True) + '\n' + str(True))
-    f = open('LastAction_PlayerA.txt', "w")
+    f = open('LastAction_Player' + weareplayer + '.txt', "w")
     f.write(str(int(ourmove)))
     f.close()
 
@@ -80,7 +80,7 @@ def open5GewinntState():
 def openLastAction():
     weareplayer, theotherplayer, _ = openHelperFile()
     print('test' + theotherplayer + weareplayer)
-    with open('LastAction_Player'+theotherplayer+'.txt', 'r') as f:
+    with open('LastAction_Player' + theotherplayer + '.txt', 'r') as f:
         lastmove = f.read()
     return lastmove
         
