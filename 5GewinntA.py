@@ -2,59 +2,56 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
-from itertools import islice
-import sys
 
 
 def field():
     return np.zeros(90)
 
 
-
-
-
-########------------------#############
+# #######------------------#############
 def openHelperFile():
     with open('HelperfileA.txt') as f:
         lines = f.readlines()
-        if lines[0] == 'C' or lines[0] == 'C\n':
+
+        firstline = lines[0].strip()
+        if firstline == 'C':
             weareplayer, theotherplayer = open5GewinntState()
-        elif lines[0] == 'A' or lines[0] == 'A\n':
+        elif firstline == 'A':
             weareplayer = 'A'
             theotherplayer = 'B'
-        elif lines[0] == 'B' or lines[0] == 'B\n':
+        elif firstline == 'B':
             weareplayer = 'B'
             theotherplayer = 'A'
+        else:
+            raise ValueError("Unable to read helper file")
         ourflip = (lines[1] == 'True\n')
         enemyflip = (lines[2] == 'True\n')
         fliplist = [ourflip, enemyflip]
     return weareplayer, theotherplayer, fliplist
 
 
-
 def openOurState(weareplayer):
     with open('OurStateA.txt') as f:
-        state = np.loadtxt(f)
-        currentposition = len(state !=0)
+        content = f.read()
+        state = np.loadtxt(content)
+        currentposition = len(state != 0)
         if state[0] == 0:
             if weareplayer == 'A':
                 enemyflipped = False
                 return state, enemyflipped
             elif openLastAction() != 'flip': 
                 enemyflipped = False  
-                return do_action(state, column = openLastAction()), enemyflipped
+                return do_action(state, column=openLastAction()), enemyflipped
             elif openLastAction() == 'flip':
                 enemyflipped = True   
                 return do_action(state, flip = True), enemyflipped
-
             
         elif openLastAction() != 'flip': 
             enemyflipped = False
-            return do_action(state, column = int(openLastAction())), enemyflipped
+            return do_action(state, column=openLastAction()), enemyflipped
         elif openLastAction() == 'flip':
             enemyflipped = True
-            return do_action(state, flip = True), enemyflipped
-        
+            return do_action(state, flip=True), enemyflipped
 
 
 def writeNewState(state, fliplist, weareplayer, ourmove):
@@ -63,10 +60,7 @@ def writeNewState(state, fliplist, weareplayer, ourmove):
         f.write(weareplayer + '\n' + str(True) + '\n' + str(True))
     f = open('LastAction_PlayerA.txt', "w")
     f.write(str(int(ourmove)))
-    f.close()    
-
-
-
+    f.close()
 
 
 def open5GewinntState():
@@ -78,11 +72,10 @@ def open5GewinntState():
         elif lines[1][11] != 'A':
             weareplayer = 'A'
             theotherplayer = 'B'
+        else:
+            raise ValueError("Unable to read state file")
     return weareplayer, theotherplayer
 
-
-
-    
 
 def openLastAction():
     weareplayer, theotherplayer, _ = openHelperFile()
@@ -91,11 +84,7 @@ def openLastAction():
         lastmove = f.read()
     return lastmove
         
-########------------------#############
-
-
-
-
+# #######------------------#############
 
 
 # 1: red, 2: yellow
