@@ -237,7 +237,7 @@ def movePlayer(programname, player, state):
     move = readMove('LastAction_Player' + player + '.txt')
     if move == '-999':
         return "Player " + player + " did not provide information on its next move in time - disqualified"
-    os.remove('LastAction_Player' + player + '.txt')
+    #os.remove('LastAction_Player' + player + '.txt')
     nMOVES = nMOVES + 1
     if move == 'flip' or move == 'FLIP' or move == 'Flip':
         if (player == 'A' and bFlippedPlayerA == True) or (player == 'B' and bFlippedPlayerB == True):
@@ -264,7 +264,7 @@ def movePlayer(programname, player, state):
 # Usage: python 5Gewinnt.py PROGRAM_PLAYER_A PROGRAM_PLAYER_B 
 ##########################################
 PROGRAM_PLAYER_A = 'python 5GewinntA.py'
-PROGRAM_PLAYER_B = 'python 5GewinntDummyPlayer.py'
+PROGRAM_PLAYER_B = 'python 5Gewinnt.py'
 
 nMOVES = 0
 lMOVES = []

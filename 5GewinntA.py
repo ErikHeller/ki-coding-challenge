@@ -2,6 +2,7 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
+import os
 
 
 def field():
@@ -10,9 +11,8 @@ def field():
 
 # #######------------------#############
 def openHelperFile():
-    with open('Helperfile.txt') as f:
+    with open('HelperfileA.txt') as f:
         lines = f.readlines()
-
         firstline = lines[0].strip()
         if firstline == 'C':
             weareplayer, theotherplayer = open5GewinntState()
@@ -31,9 +31,9 @@ def openHelperFile():
 
 
 def openOurState(weareplayer):
-    with open('OurState.txt', 'r') as f:
-        content = f.read()
-        state = np.loadtxt(content)
+    with open('OurStateA.txt', 'r') as f:
+        #content = f.read()
+        state = np.loadtxt(f)
         currentposition = len(state != 0)
         if state[0] == 0:
             if weareplayer == 'A':
@@ -55,9 +55,9 @@ def openOurState(weareplayer):
 
 
 def writeNewState(state, fliplist, weareplayer, ourmove):
-    np.savetxt('OurState.txt', state, fmt = '%1d')
-    with open('Helperfile.txt', 'w') as f:
-        f.write(weareplayer + '\n' + str(True) + '\n' + str(True))
+    np.savetxt('OurStateA.txt', state, fmt = '%1d')
+    with open('HelperfileA.txt', 'w') as f:
+        f.write(weareplayer + '\n' + str(fliplist[0]) + '\n' + str(fliplist[1]))
     f = open('LastAction_Player' + weareplayer + '.txt', "w")
     f.write(str(int(ourmove)))
     f.close()
@@ -79,7 +79,6 @@ def open5GewinntState():
 
 def openLastAction():
     weareplayer, theotherplayer, _ = openHelperFile()
-    print('test' + theotherplayer + weareplayer)
     with open('LastAction_Player' + theotherplayer + '.txt', 'r') as f:
         lastmove = f.read()
     return lastmove
@@ -334,8 +333,7 @@ def utility2_new(state):
                 else:
                     break
 
-        full_column_penalty = -50
-
+        full_column_penalty = 10000
         counter[c] += b * (min(4, 8 - height))
         counter[c] += full_column_penalty * full_columns[c]
 
@@ -529,8 +527,8 @@ def newaction(state, flip=False):
 
 
 def minval1(state, flip, num_it, alpha, beta, player):
-    if (not terminate(state) and sum(state != 0) == 9) and (state[6] == 3 or state[6] == 7):
-        print(state)
+    #if (not terminate(state) and sum(state != 0) == 9) and (state[6] == 3 or state[6] == 7):
+        #print(state)
     if terminate(state):
         last_e = last_element(state)
         color = last_e % 2
@@ -608,7 +606,7 @@ def findbestmove2(state, flip, player, num_it):
         else:
             newv = minval1(i, flip, num_it - 1, -1000, 1000, otherplayer(player))
         # print(newv)
-        print(newv, i)
+        #print(newv, i)
         if newv > v and player == 'A':
             v = newv
             beststate = i
@@ -628,15 +626,15 @@ def play5():
     new_input = 100
     depth = 4
 
-    
-    weareplayer, theotherplayer, fliplist = openHelperFile()
+
+    weareplayer, theotherplayer, fliplist = openHelperFile()  
     comp = 2 if weareplayer == 'A' else 1
     newstate, enemyflipped = openOurState(weareplayer)
     if enemyflipped == True:
         fliplist[1] = True
     state, _, fliplist[0] = findbestmove2(newstate, fliplist, comp, depth)
-    ourmove = state[np.where(state != 0)[-1]]
-    if ourmove == 13:
+    ourmove = state[max(np.where(state != 0)[-1])]
+    if ourmove.any() == 13:
         ourmove = 'flip'
     writeNewState(state, fliplist, weareplayer, ourmove)
 

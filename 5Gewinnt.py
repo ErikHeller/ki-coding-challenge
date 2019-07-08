@@ -2,10 +2,88 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
+import os
 
 
 def field():
     return np.zeros(90)
+
+
+# #######------------------#############
+def openHelperFile():
+    with open('Helperfile.txt') as f:
+        lines = f.readlines()
+        firstline = lines[0].strip()
+        if firstline == 'C':
+            weareplayer, theotherplayer = open5GewinntState()
+        elif firstline == 'A':
+            weareplayer = 'A'
+            theotherplayer = 'B'
+        elif firstline == 'B':
+            weareplayer = 'B'
+            theotherplayer = 'A'
+        else:
+            raise ValueError("Unable to read helper file")
+        ourflip = (lines[1] == 'True\n')
+        enemyflip = (lines[2] == 'True\n')
+        fliplist = [ourflip, enemyflip]
+    return weareplayer, theotherplayer, fliplist
+
+
+def openOurState(weareplayer):
+    with open('OurState.txt', 'r') as f:
+        #content = f.read()
+        state = np.loadtxt(f)
+        currentposition = len(state != 0)
+        if state[0] == 0:
+            if weareplayer == 'A':
+                enemyflipped = False
+                return state, enemyflipped
+            elif openLastAction() != 'flip': 
+                enemyflipped = False  
+                return do_action(state, column=openLastAction()), enemyflipped
+            elif openLastAction() == 'flip':
+                enemyflipped = True   
+                return do_action(state, flip = True), enemyflipped
+            
+        elif openLastAction() != 'flip': 
+            enemyflipped = False
+            return do_action(state, column=openLastAction()), enemyflipped
+        elif openLastAction() == 'flip':
+            enemyflipped = True
+            return do_action(state, flip=True), enemyflipped
+
+
+def writeNewState(state, fliplist, weareplayer, ourmove):
+    np.savetxt('OurState.txt', state, fmt = '%1d')
+    with open('Helperfile.txt', 'w') as f:
+        f.write(weareplayer + '\n' + str(fliplist[0]) + '\n' + str(fliplist[1]))
+    f = open('LastAction_Player' + weareplayer + '.txt', "w")
+    f.write(str(int(ourmove)))
+    f.close()
+
+
+def open5GewinntState():
+    with open('5GewinntState.txt') as f:
+        lines = f.readlines()
+        if lines[1][11] == 'A':
+            weareplayer = 'B'
+            theotherplayer = 'A'
+        elif lines[1][11] != 'A':
+            weareplayer = 'A'
+            theotherplayer = 'B'
+        else:
+            raise ValueError("Unable to read state file")
+    return weareplayer, theotherplayer
+
+
+def openLastAction():
+    weareplayer, theotherplayer, _ = openHelperFile()
+    with open('LastAction_Player' + theotherplayer + '.txt', 'r') as f:
+        lastmove = f.read()
+    return lastmove
+        
+# #######------------------#############
 
 
 # 1: red, 2: yellow
@@ -93,7 +171,7 @@ def terminate(state):
 
         counter = 0
         column = state[last_e]
-        height = count_column2(state, column, last_e)
+        height = count_column(state, column)
 
         # Configure the directions to look at and define if the counter determining subsequent identical stones
         # should be reset before checking this direction.
@@ -177,10 +255,6 @@ def findminusones(state):
 
 
 def utility2_new(state):
-    full_column_penalty = -50
-    win_bonus = 100
-    space_penalty = 100
-
     last_e, last_e2 = findlastvalues(state)
     color = last_e % 2
     res = color
@@ -198,7 +272,7 @@ def utility2_new(state):
         color = last_e % 2
         combo = 0
         column = state[last_e]
-        height = count_column2(state, column, last_e)
+        height = count_column(state, column)
 
         # Configure the directions to look at
         # index1: vertical direction, index2: horizontal direction
@@ -259,21 +333,138 @@ def utility2_new(state):
                 else:
                     break
 
-            # Add bonus for possible win
-            if combo == 4:
-                counter[c] += win_bonus
-
-            # Penalty if there is less space than required for vertical move
-            # TODO: Check diagonal axes
-            if horiz == "":
-                space_req = 4 - combo
-                space_avail = 8 - height
-                penalty = b * min(0, space_avail - space_req) * space_penalty
-                counter[c] += penalty
-
-        counter[c] += b * min(4, 8 - height)
+        full_column_penalty = -10000
+        counter[c] += b * (min(4, 8 - height))
         counter[c] += full_column_penalty * full_columns[c]
 
+    if res == 0:
+        return counter[0] - counter[1]
+    return counter[1] - counter[0]
+
+
+def utility2(state):
+    last_e, last_e2 = findlastvalues(state)
+    color = last_e % 2
+    res = color
+    lastvals = findminusones(state)
+    # 0 für rot, 1 für gelb
+    state_before = state.copy()
+    state_before[last_e] = 0
+    # print(state_before)
+    counter = [0, 0]
+    a, b = 2, 1
+    for c in range(len(counter)):
+        if c == 1:
+            last_e = last_e2
+            # print(last_e)
+        color = last_e % 2
+        column = state[last_e]
+        height = count_column(state, column)
+
+        # horizontal
+        check_left = True
+        check_right = True
+        for i in range(4):
+            indices = np.where(state == int(column - i - 1))[0]
+            if height > 0 and check_left and column - i - 1 > 0:
+                if len(indices) >= height:
+                    if indices[height - 1] % 2 == color:
+                        counter[c] += a
+                    else:
+                        check_left = False
+                else:
+                    counter[c] += b
+            else:
+                check_left = False
+            # print(counter,'lh')
+
+            indices = np.where(state == int(column + i + 1))[0]
+            if height > 0 and check_right and column + i + 1 < 12:
+                if len(indices) >= height:
+                    if indices[height - 1] % 2 == color:
+                        counter[c] += a
+                    else:
+                        check_right = False
+                else:
+                    counter[c] += b
+            else:
+                check_right = False
+            # print(counter,'rh')
+
+        # vertikal
+        check_bot = True
+        for i in range(4):
+            indices = np.where(state == int(column))[0]
+            # if(and len(indices)>0)
+            if check_bot and height - i - 1 > 0:
+                if indices[height - i - 2] % 2 == color:
+                    counter[c] += a
+                else:
+                    check_bot = False
+            else:
+                check_bot = False
+
+        counter[c] += b * (min(4, 8 - height))
+        # print(counter,'v')
+
+        # diag top left, bot right
+        check_left = True
+        check_right = True
+        for i in range(4):
+            indices = np.where(state == int(column - i - 1))[0]
+            if len(indices) >= height + 1 + i and check_left and column - i - 1 > 0:
+                if indices[height + i] % 2 == color:
+                    counter[c] += a
+                else:
+                    check_left = False
+            elif check_left and column - i - 1 > 0 and len(indices) < height + 1 + i:
+                counter[c] += b
+            else:
+                check_left = False
+
+            indices = np.where(state == int(column + i + 1))[0]
+            if len(indices) >= height - 1 - i > 0 and check_right and column + i + 1 < 12:
+                if indices[height - i - 2] % 2 == color:
+                    counter[c] += a
+                else:
+                    check_right = False
+            elif check_right and column + i + 1 < 12 and len(indices) < height - 1 - i > 0:
+                counter[c] += b
+            else:
+                check_right = False
+        # print(counter,'diag1')
+
+        # diag bot left, top right
+        check_left = True
+        check_right = True
+        for i in range(4):
+            indices = np.where(state == int(column - i - 1))[0]
+            if len(indices) >= height - 1 - i > 0 and check_left and column - i - 1 > 0:
+                if indices[height - i - 2] % 2 == color:
+                    counter[c] += a
+                else:
+                    check_left = False
+            elif check_left and column - i - 1 > 0 and len(indices) < height - 1 - i > 0:
+                counter[c] += b
+            else:
+                check_left = False
+
+            indices = np.where(state == int(column + i + 1))[0]
+            if len(indices) >= height + 1 + i and check_right and column + i + 1 < 12:
+                if indices[height + i] % 2 == color:
+                    counter[c] += a
+                else:
+                    check_right = False
+            elif check_right and column + i + 1 < 12 and len(indices) < height + 1 + i:
+                counter[c] += b
+            else:
+                check_right = False
+            # print(counter,'r')
+
+        counter[c] -= 50 * lastvals[c]
+        # print(res)
+    # print(counter)
+    # print()
     if res == 0:
         return counter[0] - counter[1]
     return counter[1] - counter[0]
@@ -299,8 +490,8 @@ def utility(state):
 # spieler 1
 def do_action(state, column=None, flip=False):
     return_state = np.copy(state)
-    last_e = last_element(state)
     if flip:
+        last_e = last_element(state)
         if last_e % 2 == 1:  # rot flippt
             for i in range(last_e + 1):
                 return_state[i + 1] = state[last_e - i]
@@ -313,7 +504,7 @@ def do_action(state, column=None, flip=False):
             return return_state
     for i in range(len(return_state)):
         if return_state[i] == 0:
-            if count_column2(return_state, column, last_e) < 8:
+            if count_column(return_state, column) < 8:
                 return_state[i] = column
             else:
                 return_state[i] = -1
@@ -328,16 +519,7 @@ def newaction(state, flip=False):
         res[11] = do_action(state, flip=True)
     else:
         res = np.zeros((11, 90))
-
-    # Order new actions starting from last action of the same player outwards in the board
-    last_action = state[last_element(state) - 1]
-    order = [last_action,
-             ((last_action - 2) % 11) + 1, (last_action % 11) + 1,
-             ((last_action - 3) % 11) + 1, ((last_action + 1) % 11) + 1,
-             ((last_action - 4) % 11) + 1, ((last_action + 2) % 11) + 1,
-             ((last_action - 5) % 11) + 1, ((last_action + 3) % 11) + 1,
-             ((last_action - 6) % 11) + 1, ((last_action + 4) % 11) + 1]
-
+    order = [6, 5, 7, 8, 4, 3, 9, 10, 2, 1, 11]
     for i in range(len(order)):
         res[i] = (do_action(state, order[i]))
     # np.random.shuffle(res)
@@ -345,8 +527,8 @@ def newaction(state, flip=False):
 
 
 def minval1(state, flip, num_it, alpha, beta, player):
-    if (not terminate(state) and sum(state != 0) == 9) and (state[6] == 3 or state[6] == 7):
-        print(state)
+    #if (not terminate(state) and sum(state != 0) == 9) and (state[6] == 3 or state[6] == 7):
+        #print(state)
     if terminate(state):
         last_e = last_element(state)
         color = last_e % 2
@@ -399,9 +581,9 @@ def maxval1(state, flip, num_it, alpha, beta, player):
 
 
 def otherplayer(player):
-    if player == 1:
-        return 2
-    return 1
+    if player == 'A':
+        return 'B'
+    return 'A'
 
 
 # player1 fängt an, dann player2
@@ -424,7 +606,7 @@ def findbestmove2(state, flip, player, num_it):
         else:
             newv = minval1(i, flip, num_it - 1, -1000, 1000, otherplayer(player))
         # print(newv)
-        print(newv, i)
+        #print(newv, i)
         if newv > v and player == 'A':
             v = newv
             beststate = i
@@ -432,51 +614,31 @@ def findbestmove2(state, flip, player, num_it):
             v = newv
             beststate = i
 
-    if sum(beststate == 13) != sum(state == 13) and player == 1:
+    if sum(beststate == 13) != sum(state == 13) and player == 'A':
         return beststate, terminate(beststate), [False, flip[1]]
-    if sum(beststate == 13) != sum(state == 13) and player == 2:
+    if sum(beststate == 13) != sum(state == 13) and player == 'B':
         return beststate, terminate(beststate), [flip[0], False]
     return beststate, terminate(beststate), flip
 
 
+
 def play5():
-    state = field()
-    start = int(input('Wähle einen Spieler(1 oder 2): '))
-    if start == 1:
-        new_input = int(input('Setze einen Stein (1-11): '))
-        state = do_action(state, new_input)
-        fig, ax = plt.subplots(figsize=(8, 4), dpi=130)
-        plotboard(ax, state)
-    game_over = False
-    # flip = [True,True]
-    flip = [False, False]
     new_input = 100
     depth = 4
 
-    comp = 2 if start == 1 else 1
-    # print(comp)
-    while not game_over:
-        if new_input == 55:
-            state, game_over, flip = findbestmove2(state, [False, False], comp, depth)
-        else:
-            state, game_over, flip = findbestmove2(state, flip, comp, depth)
-        # print(v)
-        # print(cboard.shape)
-        fig, ax = plt.subplots(figsize=(8, 4), dpi=130)
-        plotboard(ax, state)
-        if game_over:
-            break
-        new_input = int(input('Setze einen Stein (1-11): '))
-        if new_input == 55:
-            state = do_action(state, flip=True)
-            flip[1] = False
-        else:
-            state = do_action(state, new_input)
-        # clear_output()
-        fig, ax = plt.subplots(figsize=(8, 4), dpi=130)
-        plotboard(ax, state)
-        print(state)
-        game_over = terminate(state)
+
+    weareplayer, theotherplayer, fliplist = openHelperFile()  
+    comp = 2 if weareplayer == 'A' else 1
+    newstate, enemyflipped = openOurState(weareplayer)
+    if enemyflipped == True:
+        fliplist[1] = True
+    state, _, fliplist[0] = findbestmove2(newstate, fliplist, comp, depth)
+    ourmove = state[max(np.where(state != 0)[-1])]
+    if ourmove.any() == 13:
+        ourmove = 'flip'
+    writeNewState(state, fliplist, weareplayer, ourmove)
+
+
 
 
 if __name__ == '__main__':
