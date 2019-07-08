@@ -255,6 +255,10 @@ def findminusones(state):
 
 
 def utility2_new(state):
+    full_column_penalty = -50
+    win_bonus = 100
+    space_penalty = 100
+
     last_e, last_e2 = findlastvalues(state)
     color = last_e % 2
     res = color
@@ -272,7 +276,7 @@ def utility2_new(state):
         color = last_e % 2
         combo = 0
         column = state[last_e]
-        height = count_column(state, column)
+        height = count_column2(state, column, last_e)
 
         # Configure the directions to look at
         # index1: vertical direction, index2: horizontal direction
@@ -333,9 +337,19 @@ def utility2_new(state):
                 else:
                     break
 
-        full_column_penalty = -1000
+            # Add bonus for possible win
+            if combo == 4:
+                counter[c] += win_bonus
 
-        counter[c] += b * (min(4, 8 - height))
+            # Penalty if there is less space than required for vertical move
+            # TODO: Check diagonal axes
+            if horiz == "":
+                space_req = 4 - combo
+                space_avail = 8 - height
+                penalty = b * min(0, space_avail - space_req) * space_penalty
+                counter[c] += penalty
+
+        counter[c] += b * min(4, 8 - height)
         counter[c] += full_column_penalty * full_columns[c]
 
     if res == 0:
