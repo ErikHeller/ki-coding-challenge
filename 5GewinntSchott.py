@@ -246,8 +246,8 @@ def movePlayer(programname, player, state):
 # Main Program
 # Usage: python 5Gewinnt.py PROGRAM_PLAYER_A PROGRAM_PLAYER_B 
 ##########################################
-PROGRAM_PLAYER_A = 'python 5GewinntDummyPlayer.py'
-PROGRAM_PLAYER_B = 'python 5GewinntB.py'
+PROGRAM_PLAYER_A = 'python 5GewinntA.py'
+PROGRAM_PLAYER_B = 'python 5GewinntDummyPlayer.py'
 
 nMOVES = 0
 lMOVES = []
