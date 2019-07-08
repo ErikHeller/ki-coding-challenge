@@ -3,6 +3,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import os
+from timeit import timeit
 
 
 def field():
@@ -55,6 +56,7 @@ def openOurState(weareplayer):
 
 
 def writeNewState(state, fliplist, weareplayer, ourmove):
+    print(state, type(state))
     np.savetxt('OurState.txt', state, fmt = '%1d')
     with open('Helperfile.txt', 'w') as f:
         f.write(weareplayer + '\n' + str(fliplist[0]) + '\n' + str(fliplist[1]))
@@ -77,11 +79,22 @@ def open5GewinntState():
     return weareplayer, theotherplayer
 
 
+#def openLastAction():
+#    weareplayer, theotherplayer, _ = openHelperFile()
+#    with open('LastAction_Player' + theotherplayer + '.txt', 'r') as f:
+#        lastmove = f.read()
+#    return lastmove
+
 def openLastAction():
-    weareplayer, theotherplayer, _ = openHelperFile()
-    with open('LastAction_Player' + theotherplayer + '.txt', 'r') as f:
-        lastmove = f.read()
-    return lastmove
+    with open('5GewinntState.txt') as f:
+            lines = f.readlines()
+            if len(lines[1]) == 15:
+                lastmove = int(lines[1][-2])
+            elif len(lines[1]) == 16:
+                lastmove = int(lines[1][-3] + lines[1][-2])
+            else:
+                lastmove = 'flip'
+
         
 # #######------------------#############
 
