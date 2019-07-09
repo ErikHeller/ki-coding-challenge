@@ -78,10 +78,15 @@ def open5GewinntState():
 
 
 def openLastAction():
-    weareplayer, theotherplayer, _ = openHelperFile()
-    with open('LastAction_Player' + theotherplayer + '.txt', 'r') as f:
-        lastmove = f.read()
-    return lastmove
+    with open('5GewinntState.txt') as f:
+            lines = f.readlines()
+            if len(lines[1]) == 15:
+                lastmove = int(lines[1][-2])
+            elif len(lines[1]) == 16:
+                lastmove = int(lines[1][-3] + lines[1][-2])
+            else:
+                lastmove = 'flip'
+    return lastmov
         
 # #######------------------#############
 

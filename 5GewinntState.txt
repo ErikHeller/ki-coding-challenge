@@ -1,12 +1,12 @@
-Moves-Played: 14
-Last-Move: A	3
+Moves-Played: 36
+Last-Move: A	4
 
 Current-State:
-eeBeeeeeeee
-eeBeeeeeeee
-eeBeeeeeeee
-eeBeeeeeeee
-eeBeeeeeeee
-eeAeeeeeeee
-eeBeeAeeeee
-AeBeeAAeAeA
+eeeeeAeeeee
+eeeBeBeeeee
+eeeBeAeeeee
+eeeAeBeeeee
+eeeAeAeAAee
+AeeABBeBBee
+AAeBBBeBBeA
+ABABBBBAAAA
