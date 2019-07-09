@@ -61,7 +61,10 @@ def writeNewState(state, fliplist, weareplayer, ourmove):
         f.write(str(fliplist[0]) + '\n')
         f.write(str(fliplist[1]))
     f = open('LastAction_Player' + weareplayer + '.txt', "w")
-    f.write(str(int(ourmove)))
+    if ourmove != 13:
+        f.write(str(int(ourmove)))
+    elif ourmove == 13:
+        f.write('flip')
     f.close()
 
 
@@ -677,7 +680,7 @@ def findbestmove2(state, flip, player, num_it):
         else:
             newv = minval1(i, flip, num_it - 1, -1000, 1000, otherplayer(player))
         # print(newv)
-        #print(newv, i)
+        print(newv, i)
         if newv > v and player == 'A':
             v = newv
             beststate = i
@@ -695,11 +698,12 @@ def findbestmove2(state, flip, player, num_it):
 
 def play5():
     new_input = 100
-    depth = 4
+    depth = 3
 
 
     weareplayer, theotherplayer, fliplist = openHelperFile()  
-    comp = 2 if weareplayer == 'A' else 1
+    comp = 'A' if weareplayer == 'A' else 'B'
+    print(comp)
     newstate, enemyflipallowed = openOurState(weareplayer, fliplist)
     if enemyflipallowed == False:
         fliplist[1] = False

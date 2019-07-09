@@ -232,7 +232,7 @@ def movePlayer(programname, player, state):
     global bFlippedPlayerA
     global bFlippedPlayerB
     os.system(programname + ' 5GewinntState.txt LastAction_Player' + player + '.txt &')
-    time.sleep(15)
+    time.sleep(1)
     check_kill_process('LastAction_Player' + player + '.txt')
     move = readMove('LastAction_Player' + player + '.txt')
     if move == '-999':
