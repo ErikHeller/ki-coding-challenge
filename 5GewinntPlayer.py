@@ -1,8 +1,12 @@
 # coding: utf-8
+import sys
 
 import numpy as np
 from matplotlib import pyplot as plt
-import os
+
+helperfile = 'Helperfile.txt'
+statefile = '5GewinntState.txt'
+movefile = ''
 
 
 def field():
@@ -11,7 +15,7 @@ def field():
 
 # #######------------------#############
 def openHelperFile():
-    with open('HelperfileB.txt') as f:
+    with open(helperfile) as f:
         lines = f.readlines()
         firstline = lines[0].strip()
         if firstline == 'C':
@@ -25,46 +29,52 @@ def openHelperFile():
         else:
             raise ValueError("Unable to read helper file")
         ourflip = (lines[1] == 'True\n')
-        enemyflip = (lines[2] == 'True\n')
+        enemyflip = (lines[2] == 'True\n' or lines[2] == 'True')
         fliplist = [ourflip, enemyflip]
     return weareplayer, theotherplayer, fliplist
 
 
-def openOurState(weareplayer):
-    with open('OurState' + weareplayer + '.txt', 'r') as f:
-        #content = f.read()
+def openOurState(weareplayer, fliplist):
+    with open('OurState.txt', 'r') as f:
+        # content = f.read()
         state = np.loadtxt(f)
         currentposition = len(state != 0)
+        enemyflipallowed = fliplist[1]
         if state[0] == 0:
             if weareplayer == 'A':
-                enemyflipped = False
-                return state, enemyflipped
-            elif openLastAction() != 'flip': 
-                enemyflipped = False  
-                return do_action(state, column=openLastAction()), enemyflipped
+                enemyflipallowed = True
+                return state, enemyflipallowed
+            elif openLastAction() != 'flip':
+                # enemyflipallowed = True
+                return do_action(state, column=openLastAction()), enemyflipallowed
             elif openLastAction() == 'flip':
-                enemyflipped = True   
-                return do_action(state, flip = True), enemyflipped
-            
-        elif openLastAction() != 'flip': 
-            enemyflipped = False
-            return do_action(state, column=openLastAction()), enemyflipped
+                enemyflipallowed = False
+                return do_action(state, flip=True), enemyflipallowed
+
+        elif openLastAction() != 'flip':
+            # enemyflipallowed = True
+            return do_action(state, column=openLastAction()), enemyflipallowed
         elif openLastAction() == 'flip':
-            enemyflipped = True
-            return do_action(state, flip=True), enemyflipped
+            enemyflipallowed = False
+            return do_action(state, flip=True), enemyflipallowed
 
 
 def writeNewState(state, fliplist, weareplayer, ourmove):
-    np.savetxt('OurState' + weareplayer + '.txt', state, fmt = '%1d')
-    with open('Helperfile' + weareplayer + '.txt', 'w') as f:
-        f.write(weareplayer + '\n' + str(fliplist[0]) + '\n' + str(fliplist[1]))
-    f = open('LastAction_Player' + weareplayer + '.txt', "w")
-    f.write(str(int(ourmove)))
+    np.savetxt('OurState.txt', state, fmt='%1d')
+    with open(helperfile, 'w') as f:
+        f.write(weareplayer + '\n')
+        f.write(str(fliplist[0]) + '\n')
+        f.write(str(fliplist[1]))
+    f = open(movefile, "w")
+    if ourmove != 13:
+        f.write(str(int(ourmove)))
+    elif ourmove == 13:
+        f.write('flip')
     f.close()
 
 
 def open5GewinntState():
-    with open('5GewinntState.txt') as f:
+    with open(statefile) as f:
         lines = f.readlines()
         if lines[1][11] == 'A':
             weareplayer = 'B'
@@ -77,12 +87,24 @@ def open5GewinntState():
     return weareplayer, theotherplayer
 
 
+# def openLastAction():
+#    weareplayer, theotherplayer, _ = openHelperFile()
+#    with open(movefile, 'r') as f:
+#        lastmove = f.read()
+#    return lastmove
+
 def openLastAction():
-    weareplayer, theotherplayer, _ = openHelperFile()
-    with open('LastAction_Player' + theotherplayer + '.txt', 'r') as f:
-        lastmove = f.read()
+    with open(statefile) as f:
+        lines = f.readlines()
+        if len(lines[1]) == 15:
+            lastmove = int(lines[1][-2])
+        elif len(lines[1]) == 16:
+            lastmove = int(lines[1][-3] + lines[1][-2])
+        else:
+            lastmove = 'flip'
     return lastmove
-        
+
+
 # #######------------------#############
 
 
@@ -421,8 +443,8 @@ def newaction(state, flip=False):
 
 
 def minval1(state, flip, num_it, alpha, beta, player):
-    if (not terminate(state) and sum(state != 0) == 9) and (state[6] == 3 or state[6] == 7):
-        print(state)
+    # if (not terminate(state) and sum(state != 0) == 9) and (state[6] == 3 or state[6] == 7):
+    # print(state)
     if terminate(state):
         last_e = last_element(state)
         color = last_e % 2
@@ -437,7 +459,6 @@ def minval1(state, flip, num_it, alpha, beta, player):
         return utility(state)
     v = 1000
     actions = newaction(state, flip[1])
-    # print(actions)
     for i in actions:
         if i[0] != state[0]:
             v = min(v, maxval1(i, [flip[0], False], num_it - 1, alpha, beta, otherplayer(player)))
@@ -500,7 +521,7 @@ def findbestmove2(state, flip, player, num_it):
         else:
             newv = minval1(i, flip, num_it - 1, -1000, 1000, otherplayer(player))
         # print(newv)
-        #print(newv, i)
+        print(newv, i)
         if newv > v and player == 'A':
             v = newv
             beststate = i
@@ -515,26 +536,30 @@ def findbestmove2(state, flip, player, num_it):
     return beststate, terminate(beststate), flip
 
 
-
 def play5():
-    new_input = 100
-    depth = 4
+    # new_input = 100
+    depth = 3
 
-
-    weareplayer, theotherplayer, fliplist = openHelperFile()  
-    comp = 2 if weareplayer == 'A' else 1
-    newstate, enemyflipped = openOurState(weareplayer)
-    if enemyflipped == True:
-        fliplist[1] = True
-    state, _, fliplist[0] = findbestmove2(newstate, fliplist, comp, depth)
-    ourmove = state[np.where(state != 0)[-1]]
-    print(ourmove)
+    weareplayer, theotherplayer, fliplist = openHelperFile()
+    comp = 'A' if weareplayer == 'A' else 'B'
+    print(comp)
+    newstate, enemyflipallowed = openOurState(weareplayer, fliplist)
+    if not enemyflipallowed:
+        fliplist[1] = False
+    state, _, fliplist = findbestmove2(newstate, fliplist, comp, depth)
+    ourmove = state[max(np.where(state != 0)[-1])]
     if ourmove.any() == 13:
         ourmove = 'flip'
-    writeNewState(state, fliplist, weareplayer, ourmove[0])
-
-
+    writeNewState(state, fliplist, weareplayer, ourmove)
 
 
 if __name__ == '__main__':
+
+    if len(sys.argv) < 3:
+        print("5GewinntPlayer.py STATEFILE MOVEFILE")
+        sys.exit()
+
+    statefile = sys.argv[1]
+    movefile = sys.argv[2]
+
     play5()
