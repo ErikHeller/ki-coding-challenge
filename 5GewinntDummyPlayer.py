@@ -15,4 +15,4 @@ f = open(sys.argv[2], "w")
 f.write(move)
 f.close()
 
-time.sleep(20)
+# time.sleep(20)

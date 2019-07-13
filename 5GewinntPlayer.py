@@ -3,14 +3,16 @@ import sys
 import time
 
 import numpy as np
-from matplotlib import pyplot as plt
 
 helperfile = 'Helperfile.txt'
 statefile = '5GewinntState.txt'
 movefile = ''
 
 start_time = time.time()
-time_limit = 0.4
+time_limit = 0.9
+
+max_depth = 3
+
 
 def field():
     return np.zeros(90)
@@ -67,10 +69,10 @@ def writeNewState(state, fliplist, weareplayer, ourmove):
         f.write(str(fliplist[0]) + '\n')
         f.write(str(fliplist[1]))
     f = open(movefile, "w")
-    if ourmove == 'flip':
-        f.write('flip')
-    else:
+    if ourmove != 13:
         f.write(str(int(ourmove)))
+    elif ourmove == 13 or ourmove == 'flip':
+        f.write('flip')
     f.close()
 
 
@@ -107,29 +109,6 @@ def openLastAction():
 
 
 # #######------------------#############
-
-
-# 1: red, 2: yellow
-# %matplotlib inline
-def plotboard(ax, state):
-    for i in range(12):
-        ax.vlines(i + 0.5, 0.5, 8.5)
-    ax.hlines(0.5, 0.5, 11.5)
-    counter = 0
-    height = np.zeros(11)
-    for j in state:
-        if j == 0:
-            break
-        elif j == 13 or j == -1:
-            counter += 1
-            continue
-        elif counter % 2 == 0:
-            ax.plot(j, height[int(j - 1)] + 1, '.', markersize=45, color='red')
-        else:
-            ax.plot(j, height[int(j - 1)] + 1, '.', markersize=45, color='yellow')
-        height[int(j - 1)] += 1
-        counter += 1
-    plt.show()
 
 
 def last_element(state):
@@ -278,7 +257,7 @@ def findminusones(state):
 
 
 def utility2_new(state):
-    full_column_penalty = -50
+    full_column_penalty = -5000
     win_bonus = 100
     space_penalty = 100
 
@@ -403,7 +382,7 @@ def do_action(state, column=None, flip=False):
     if flip:
         last_e = last_element(state)
         if last_e % 2 == 1:  # rot flippt
-            for i in range(last_e + 1):
+            for i in range(last_e):
                 return_state[i + 1] = state[last_e - i]
             return_state[0] = 13
             return return_state
@@ -421,6 +400,15 @@ def do_action(state, column=None, flip=False):
     return return_state
 
 
+def filter_columns(state, columns):
+    result = []
+    for column in columns:
+        count = count_column(state, column)
+        if count < 8:
+            result.append(column)
+
+    return result
+
 def newaction(state, flip=False):
     if flip:
         res = np.zeros((12, 90))
@@ -437,9 +425,10 @@ def newaction(state, flip=False):
              ((last_action - 5) % 11) + 1, ((last_action + 3) % 11) + 1,
              ((last_action - 6) % 11) + 1, ((last_action + 4) % 11) + 1]
 
-    for i in range(len(order)):
-        res[i] = (do_action(state, order[i]))
-    # np.random.shuffle(res)
+    columns = filter_columns(state, order)
+
+    for i in range(len(columns)):
+        res[i] = (do_action(state, columns[i]))
     return res
 
 
@@ -506,7 +495,12 @@ def otherplayer(player):
 def findbestmove2(state, flip, player, depth):
     if state[3] == 0:
         return do_action(state, 6), False, flip
-    actions = newaction(state, flip[0])
+    if player == 'A':
+        actions = newaction(state, flip[0])
+    elif player == 'B':
+        actions = newaction(state, flip[1])
+    else:
+        raise ValueError("Invalid player " + player)
     v = -10000 if player == 'A' else 10000
     index = np.random.uniform(1, 12)
     beststate = do_action(state, index)
@@ -519,13 +513,16 @@ def findbestmove2(state, flip, player, depth):
 
         last_e = last_element(action)
         if action[0] != state[0] and player == 'A':
-            newv = minval1(action, [False, flip[1]], depth - 1, -1000, 1000, otherplayer(player))
+            flip = [False, flip[1]]
+            newv = minval1(action, flip, depth - 1, -1000, 1000, otherplayer(player))
         elif action[last_e] == 13:
-            newv = maxval1(action, [flip[0], False], depth - 1, -1000, 1000, otherplayer(player))
+            flip = [flip[0], False]
+            newv = maxval1(action, flip, depth - 1, -1000, 1000, otherplayer(player))
         elif player == 'B':
             newv = maxval1(action, flip, depth - 1, -1000, 1000, otherplayer(player))
         else:
             newv = minval1(action, flip, depth - 1, -1000, 1000, otherplayer(player))
+
         if newv > v and player == 'A':
             v = newv
             beststate = action
@@ -542,7 +539,7 @@ def findbestmove2(state, flip, player, depth):
 
 def play5():
     # new_input = 100
-    depth = 3
+    depth = max_depth
 
     weareplayer, theotherplayer, fliplist = openHelperFile()
     comp = 'A' if weareplayer == 'A' else 'B'
@@ -552,7 +549,7 @@ def play5():
         fliplist[1] = False
     state, _, fliplist = findbestmove2(newstate, fliplist, comp, depth)
     ourmove = state[max(np.where(state != 0)[-1])]
-    if ourmove.any() == 13:
+    if ourmove.any == 13:
         ourmove = 'flip'
     writeNewState(state, fliplist, weareplayer, ourmove)
 
